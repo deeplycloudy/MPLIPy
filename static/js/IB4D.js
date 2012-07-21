@@ -68,7 +68,7 @@ slide_event = function(){
     var bounds = read_slider_positions();
     update_slider_labels(bounds);
     
-    
+    // console.log("Got slide event")
         
     kernel.execute("update_limits(\'" + JSON.stringify(bounds)  + "\')", {'output': $.proxy(output_area.handle_output, output_area)});
 
