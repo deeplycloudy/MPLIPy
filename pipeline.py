@@ -18,7 +18,7 @@ def segment(ax_bundle, target):
     """
     while True:
         a = (yield)
-        print "segment passthrough to ", target
+        # print "segment passthrough to ", target
         target.send(a)
 
 
