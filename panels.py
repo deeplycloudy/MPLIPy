@@ -100,12 +100,7 @@ class MPLaxesManager(object):
     def __init__(self, axes, coordinate_names):
         self.axes   = axes
         self.coordinate_names = coordinate_names
-        self.events = Accumulator(self.on_axes_changed)
-
-        self.pcolors = {}
-        self.scatters = {}
-        self.lines = {}
-        
+        self.events = Accumulator(self.on_axes_changed)        
         
         # If pan/zoom events involve time ('t') on one axis,
         #   don't change the bounds on the other axis
@@ -188,10 +183,13 @@ class Panels(object):
         self.figure = figure
         self.panels = {}
         self.axes_managers = {}
-        self.figure_manager = None
         self.bounds = Bounds()
         
         self.bounds_updated_callback = None
+        
+        self.datasets = [] # probably actually should be a set, not list. Just add to this.
+        self.ax_specs = {} # {ax0:ax0_spec, ax1:ax1_spec}, specs are {'x':'array_varname', 'y':'array_varname}
+
         
         self._panel_setup()
         
@@ -206,7 +204,7 @@ class Panels(object):
 
     def update_bounds_after_interaction(self, ax_mgr):
         bounds = self.bounds
-        x_var, y_var = ax_mgr.coordinate_names
+        x_var, y_var = ax_mgr.coordinate_names['x'], ax_mgr.coordinate_names['y']
         axes = ax_mgr.axes
                 
         # Figure out if the axis limits have changed, and set any new bounds
@@ -236,7 +234,10 @@ class Panels(object):
     
     
     def _panel_setup(self):
-        fig    = self.figure
+        fig = self.figure
+        
+        # there's a lot of redundancy here. Could it be reduced to ax_specs,
+        # which the data pipeline uses, and nothing else?
         
         # --------- Set up data display axes ---------
         panels = self.panels
@@ -247,16 +248,18 @@ class Panels(object):
         
         panels['xz'].xaxis.set_visible(False)
         panels['zy'].yaxis.set_visible(False)
+
+        self.ax_specs = { panels['xy']: {'x':'x', 'y':'y'}, 
+                          panels['xz']: {'x':'x', 'y':'z'},
+                          panels['zy']: {'x':'z', 'y':'y'},
+                          panels['tz']: {'x':'t', 'y':'z'}, }
         
-        xy_manager = MPLaxesManager(panels['xy'], ('x','y'))    
-        xz_manager = MPLaxesManager(panels['xz'], ('x','z'))
-        zy_manager = MPLaxesManager(panels['zy'], ('z','y'))
-        tz_manager = MPLaxesManager(panels['tz'], ('t','z'))
+        self.axes_managers['xy'] = MPLaxesManager(panels['xy'], self.ax_specs[panels['xy']])
+        self.axes_managers['xz'] = MPLaxesManager(panels['xz'], self.ax_specs[panels['xz']])
+        self.axes_managers['zy'] = MPLaxesManager(panels['zy'], self.ax_specs[panels['zy']])
+        self.axes_managers['tz'] = MPLaxesManager(panels['tz'], self.ax_specs[panels['tz']])
         
-        self.axes_managers['xy'] = xy_manager
-        self.axes_managers['xz'] = xz_manager
-        self.axes_managers['zy'] = zy_manager
-        self.axes_managers['tz'] = tz_manager
+
         
         for mgr in self.axes_managers.values():
             mgr.interaction_callback = self.update_bounds_after_interaction
